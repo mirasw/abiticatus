@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retrolog</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f7f4ef;
+  --surface: #fffffe;
+  --border: #ddd8ce;
+  --border-soft: #eae6df;
+  --text: #1a1916;
+  --text-muted: #7a756c;
+  --text-hint: #b0aa9f;
+  --gold: #9a6f2e;
+  --gold-light: #f5eddb;
+  --gold-mid: #c9952a;
+  --gold-border: #e8d5a8;
+  --green: #2d6a4f;
+  --green-light: #d8f0e6;
+  --secret: #6b3fa0;
+  --secret-light: #f0eafa;
+  --secret-border: #d4bff0;
+  --money-green: #1a5c38;
+  --money-light: #e6f4ed;
+  --money-border: #a8d5bc;
+  --font-mono: 'IBM Plex Mono', monospace;
+  --font-serif: 'Lora', Georgia, serif;
+  --radius: 6px;
+  --radius-lg: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-mono);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+  line-height: 1.6;
+  padding-bottom: 80px;
+}
+
+#top-bar {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 14px;
+}
+#coin-total {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 15px; font-weight: 500; color: var(--gold); white-space: nowrap;
+}
+#coin-total::before { content: '◈'; font-size: 13px; }
+#progress-wrap { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+#progress-track { flex: 1; height: 4px; background: var(--border-soft); border-radius: 2px; overflow: hidden; }
+#progress-fill { height: 100%; background: var(--gold-mid); border-radius: 2px; transition: width 0.5s cubic-bezier(.4,0,.2,1); }
+#progress-text { font-size: 11px; color: var(--text-hint); white-space: nowrap; min-width: 80px; text-align: right; }
+#reward-tag {
+  font-size: 11px; padding: 3px 10px;
+  background: var(--gold-light); color: var(--gold);
+  border-radius: 20px; border: 1px solid var(--gold-border);
+  max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+}
+#reward-tag:hover { background: #eedeb0; }
+
+#settings-panel {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 14px 20px; display: none; gap: 14px; flex-wrap: wrap; align-items: flex-end;
+}
+#settings-panel.open { display: flex; }
+.sg { display: flex; flex-direction: column; gap: 4px; }
+.sg label { font-size: 10px; color: var(--text-muted); letter-spacing: 0.07em; text-transform: uppercase; }
+.sg input {
+  font-family: var(--font-mono); font-size: 13px;
+  padding: 5px 9px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg); color: var(--text);
+  width: 190px; outline: none;
+}
+.sg input[type=number] { width: 68px; }
+.sg input:focus { border-color: var(--gold-mid); }
+.rate-row { display: flex; gap: 5px; }
+#save-settings {
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 5px 14px; background: var(--gold-light); color: var(--gold);
+  border: 1px solid var(--gold-border); border-radius: var(--radius);
+  cursor: pointer; align-self: flex-end;
+}
+#save-settings:hover { background: #eedeb0; }
+
+#main-layout { display: flex; align-items: flex-start; }
+#task-col { flex: 1; min-width: 0; }
+
+.input-section {
+  padding: 13px 20px; background: var(--surface); border-bottom: 1px solid var(--border);
+}
+.input-row { display: flex; gap: 8px; align-items: center; }
+.main-input {
+  flex: 1; font-family: var(--font-mono); font-size: 14px;
+  padding: 8px 12px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg); color: var(--text);
+  outline: none; transition: border-color 0.15s, box-shadow 0.15s; min-width: 0;
+}
+.main-input::placeholder { color: var(--text-hint); }
+.main-input:focus { border-color: var(--gold-mid); box-shadow: 0 0 0 3px rgba(154,111,46,0.09); }
+#date-input {
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 7px 9px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg); color: var(--text-muted);
+  outline: none; width: 128px; flex-shrink: 0;
+}
+#date-input:focus { border-color: var(--gold-mid); }
+#diff-preview { font-size: 11px; color: var(--text-hint); min-width: 96px; text-align: right; white-space: nowrap; flex-shrink: 0; }
+#diff-preview.lit { color: var(--gold-mid); font-weight: 500; }
+#diff-preview.slit { color: var(--secret); font-weight: 500; }
+.hint-line { margin-top: 7px; font-size: 10px; color: var(--text-hint); letter-spacing: 0.02em; }
+
+#ledger-wrap { padding: 0 20px 30px; }
+#ledger-header {
+  display: grid; grid-template-columns: 84px 1fr 74px 58px 26px;
+  padding: 9px 0 5px; border-bottom: 1px solid var(--border);
+  font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-hint); gap: 6px;
+}
+.ledger-row {
+  display: grid; grid-template-columns: 84px 1fr 74px 58px 26px;
+  padding: 8px 0; border-bottom: 1px solid var(--border-soft);
+  gap: 6px; align-items: center; cursor: pointer; border-radius: 3px;
+  animation: rowIn 0.18s ease;
+}
+.ledger-row:hover { background: #f5f2ec; }
+@keyframes rowIn { from { opacity:0; transform:translateY(-3px); } to { opacity:1; transform:translateY(0); } }
+.row-date { font-size: 11px; color: var(--text-hint); }
+.row-task { font-size: 13px; color: var(--text); font-family: var(--font-serif); word-break: break-word; }
+.row-task.secret { color: var(--secret); font-style: italic; }
+.row-diff {
+  font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 20px; text-align: center; display: inline-block; white-space: nowrap;
+}
+.dt { background: #f0ede8; color: var(--text-hint); }
+.de { background: var(--green-light); color: var(--green); }
+.dm { background: #e8f0fb; color: #3a5fa0; }
+.dh { background: var(--gold-light); color: var(--gold); }
+.ds { background: var(--secret-light); color: var(--secret); border: 1px solid var(--secret-border); }
+.row-coins { font-size: 12px; color: var(--gold); text-align: right; }
+.row-coins.secret { color: var(--secret); }
+.edit-hint { font-size: 11px; color: var(--text-hint); opacity: 0; cursor: pointer; text-align: center; }
+.ledger-row:hover .edit-hint { opacity: 1; }
+
+.edit-row {
+  display: grid; grid-template-columns: 84px 1fr 74px auto 26px;
+  padding: 6px 0; border-bottom: 1px solid var(--gold-border);
+  gap: 6px; align-items: center; background: #fffdf7; border-radius: 3px;
+}
+.edit-row input, .edit-row select {
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 4px 7px; border: 1px solid var(--gold-border);
+  border-radius: var(--radius); background: var(--surface); color: var(--text); outline: none; width: 100%;
+}
+.edit-row input:focus, .edit-row select:focus { border-color: var(--gold-mid); }
+.eactions { display: flex; gap: 4px; }
+.btn-ok {
+  font-family: var(--font-mono); font-size: 10px; padding: 3px 9px;
+  background: var(--gold-light); color: var(--gold); border: 1px solid var(--gold-border);
+  border-radius: var(--radius); cursor: pointer;
+}
+.btn-ok:hover { background: #eedeb0; }
+.btn-del {
+  font-size: 13px; color: var(--text-hint); cursor: pointer;
+  padding: 2px 4px; border-radius: 3px; border: none; background: none; line-height: 1;
+}
+.btn-del:hover { color: #b03020; }
+
+#empty-state { padding: 36px 0; text-align: center; color: var(--text-hint); font-size: 12px; line-height: 2.2; }
+
+/* MONEY PANEL */
+#money-panel {
+  width: 296px; flex-shrink: 0; border-left: 1px solid var(--border);
+  background: var(--surface); position: sticky; top: 53px;
+  max-height: calc(100vh - 53px); overflow-y: auto;
+  display: flex; flex-direction: column;
+}
+#money-top { padding: 12px 15px 10px; border-bottom: 1px solid var(--border); }
+#money-total-row { display: flex; align-items: baseline; gap: 7px; margin-bottom: 8px; }
+#money-total { font-size: 22px; font-weight: 500; color: var(--money-green); }
+#money-total::before { content: '$'; font-size: 13px; margin-right: 1px; vertical-align: baseline; }
+#money-lbl { font-size: 11px; color: var(--text-hint); }
+#money-filters { display: flex; gap: 5px; }
+.mfbtn {
+  font-family: var(--font-mono); font-size: 10px; padding: 2px 9px;
+  border-radius: 20px; border: 1px solid var(--border); background: transparent;
+  color: var(--text-hint); cursor: pointer; transition: all 0.12s;
+}
+.mfbtn.on { background: var(--money-light); color: var(--money-green); border-color: var(--money-border); }
+
+#money-input-section { padding: 10px 15px; border-bottom: 1px solid var(--border); }
+#money-input-row { display: flex; gap: 7px; align-items: center; }
+#money-input {
+  flex: 1; font-family: var(--font-mono); font-size: 13px;
+  padding: 6px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--bg); color: var(--text);
+  outline: none; min-width: 0;
+}
+#money-input::placeholder { color: var(--text-hint); }
+#money-input:focus { border-color: #6aad8a; box-shadow: 0 0 0 3px rgba(26,92,56,0.08); }
+#money-preview { font-size: 11px; color: var(--text-hint); white-space: nowrap; min-width: 62px; text-align: right; flex-shrink: 0; }
+#money-preview.lit { color: var(--money-green); font-weight: 500; }
+.money-hint { margin-top: 6px; font-size: 10px; color: var(--text-hint); }
+
+#money-list { flex: 1; overflow-y: auto; }
+#money-list-header {
+  display: grid; grid-template-columns: 68px 1fr 58px 20px;
+  padding: 7px 15px 4px; border-bottom: 1px solid var(--border);
+  font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-hint); gap: 5px;
+}
+.money-row {
+  display: grid; grid-template-columns: 68px 1fr 58px 20px;
+  padding: 7px 15px; border-bottom: 1px solid var(--border-soft);
+  gap: 5px; align-items: center; cursor: pointer; transition: background 0.1s;
+  animation: rowIn 0.18s ease;
+}
+.money-row:hover { background: #f5f2ec; }
+.money-row:hover .edit-hint { opacity: 1; }
+.mdate { font-size: 10px; color: var(--text-hint); }
+.mdesc { font-size: 12px; color: var(--text); font-family: var(--font-serif); word-break: break-word; }
+.mamt { font-size: 12px; color: var(--money-green); text-align: right; font-weight: 500; }
+.mtype-badge {
+  font-size: 9px; padding: 1px 5px; border-radius: 20px;
+  text-transform: uppercase; letter-spacing: 0.03em; white-space: nowrap;
+}
+.mt-saved { background: var(--money-light); color: var(--money-green); }
+.mt-income { background: #e8f0fb; color: #3a5fa0; }
+.mt-other { background: #f0ede8; color: var(--text-hint); }
+
+.money-edit-row {
+  display: grid; grid-template-columns: 68px 1fr 58px 20px;
+  padding: 5px 15px; border-bottom: 1px solid var(--money-border);
+  gap: 5px; align-items: center; background: #f0faf5;
+}
+.money-edit-row input, .money-edit-row select {
+  font-family: var(--font-mono); font-size: 11px; padding: 3px 6px;
+  border: 1px solid var(--money-border); border-radius: var(--radius);
+  background: var(--surface); color: var(--text); outline: none; width: 100%;
+}
+.money-edit-row input:focus, .money-edit-row select:focus { border-color: #4a9e6e; }
+.meactions { display: flex; gap: 3px; }
+
+#money-empty { padding: 22px 15px; text-align: center; color: var(--text-hint); font-size: 11px; line-height: 2.1; }
+
+#float-coins {
+  position: fixed; pointer-events: none;
+  font-family: var(--font-mono); font-size: 15px; font-weight: 500; opacity: 0; z-index: 999;
+}
+#float-money-el {
+  position: fixed; pointer-events: none;
+  font-family: var(--font-mono); font-size: 15px; font-weight: 500;
+  color: var(--money-green); opacity: 0; z-index: 999;
+}
+
+#export-btn {
+  position: fixed; bottom: 18px; left: 18px;
+  font-family: var(--font-mono); font-size: 11px; padding: 5px 13px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  color: var(--text-muted); cursor: pointer; transition: all 0.15s;
+}
+#export-btn:hover { background: var(--gold-light); color: var(--gold); border-color: var(--gold-border); }
+
+@media (max-width: 680px) { #money-panel { display: none; } }
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <div id="coin-total">0.00</div>
+  <div id="progress-wrap">
+    <div id="progress-track"><div id="progress-fill" style="width:0%"></div></div>
+    <div id="progress-text">0 / 1800</div>
+  </div>
+  <div id="reward-tag" onclick="toggleSettings()" title="click to edit goal">set a goal →</div>
+</div>
+
+<div id="settings-panel">
+  <div class="sg">
+    <label>Goal name</label>
+    <input type="text" id="s-reward" placeholder="e.g. Echo Show 15" />
+  </div>
+  <div class="sg">
+    <label>Goal (coins)</label>
+    <input type="number" id="s-goal" value="1800" min="1" />
+  </div>
+  <div class="sg">
+    <label>Coin rates &mdash; trivial / easy / medium / hard / secret</label>
+    <div class="rate-row">
+      <input type="number" id="r-t" value="0.25" step="0.05" />
+      <input type="number" id="r-e" value="1.50" step="0.05" />
+      <input type="number" id="r-m" value="3.00" step="0.05" />
+      <input type="number" id="r-h" value="5.00" step="0.05" />
+      <input type="number" id="r-s" value="10.00" step="0.05" />
+    </div>
+  </div>
+  <button id="save-settings" onclick="saveSettings()">save</button>
+</div>
+
+<div id="main-layout">
+  <div id="task-col">
+    <div class="input-section">
+      <div class="input-row">
+        <input type="text" id="task-input" class="main-input" placeholder="what did you do?  /t /e /m /h /s" autocomplete="off" />
+        <input type="date" id="date-input" />
+        <div id="diff-preview">medium · +3.00</div>
+      </div>
+      <div class="hint-line">/t trivial &nbsp;·&nbsp; /e easy &nbsp;·&nbsp; /m medium &nbsp;·&nbsp; /h hard &nbsp;·&nbsp; /s secret &nbsp;·&nbsp; press enter to log &nbsp;·&nbsp; click any row to edit</div>
+    </div>
+    <div id="ledger-wrap">
+      <div id="ledger-header">
+        <span>date</span><span>task</span><span>difficulty</span><span style="text-align:right">coins</span><span></span>
+      </div>
+      <div id="ledger-body"><div id="empty-state">nothing logged yet<br>start anywhere</div></div>
+    </div>
+  </div>
+
+  <div id="money-panel">
+    <div id="money-top">
+      <div id="money-total-row">
+        <div id="money-total">0.00</div>
+        <div id="money-lbl">available</div>
+      </div>
+      <div id="money-filters">
+        <button class="mfbtn on" onclick="setFilter('all',this)">all</button>
+        <button class="mfbtn" onclick="setFilter('saved',this)">saved</button>
+        <button class="mfbtn" onclick="setFilter('income',this)">income</button>
+      </div>
+    </div>
+    <div id="money-input-section">
+      <div id="money-input-row">
+        <input type="text" id="money-input" class="main-input" placeholder="canceled netflix /saved 18" autocomplete="off" style="font-size:12px;padding:6px 10px;" />
+        <div id="money-preview">$0.00</div>
+      </div>
+      <div class="money-hint">add "saved" or "income" anywhere · dollar amount at the end · enter to log</div>
+    </div>
+    <div id="money-list">
+      <div id="money-list-header">
+        <span>date</span><span>description</span><span style="text-align:right">amount</span><span></span>
+      </div>
+      <div id="money-body"><div id="money-empty">no entries yet<br>log what you saved<br>or received</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="float-coins"></div>
+<div id="float-money-el"></div>
+<button id="export-btn" onclick="exportCSV()">export csv</button>
+
+<script>
+const SK = 'retrolog_v2';
+let S = {
+  coins: 0, goal: 1800, reward: '',
+  rates: { t:0.25, e:1.50, m:3.00, h:5.00, s:10.00 },
+  entries: [], money: [],
+  startDate: new Date().toISOString().slice(0,10)
+};
+let mFilter = 'all', editTaskId = null, editMoneyId = null;
+
+function load() {
+  try { const r = localStorage.getItem(SK); if (r) S = Object.assign({}, S, JSON.parse(r)); if (!S.rates.s) S.rates.s=10; if (!S.money) S.money=[]; } catch(e) {}
+}
+function save() { localStorage.setItem(SK, JSON.stringify(S)); }
+
+const DL = { t:'trivial', e:'easy', m:'medium', h:'hard', s:'secret' };
+const DK = ['t','e','m','h','s'];
+
+function parseTask(raw) {
+  const m = raw.match(/\/([temhs])\s*$/i);
+  if (!m) return { text: raw.trim(), diff: 'm' };
+  const d = m[1].toLowerCase();
+  return { text: raw.replace(/\s*\/[temhs]\s*$/i,'').trim(), diff: DK.includes(d)?d:'m' };
+}
+
+function parseMoney(raw) {
+  const tm = raw.match(/\/?\ ?(saved|income)\b/i);
+  const type = tm ? tm[1].toLowerCase() : 'other';
+  let stripped = raw.replace(/\/?\ ?(saved|income)\b/i,'');
+  const centMatch = stripped.match(/(\d+\.?\d*)\s*cents?\s*$/i);
+  let amount = 0;
+  if (centMatch) {
+    amount = parseFloat(centMatch[1]) / 100;
+    stripped = stripped.replace(/(\d+\.?\d*)\s*cents?\s*$/i,'');
+  } else {
+    const amMatch = stripped.match(/\$?\s*(\d+\.?\d*)\s*(dollars?|bucks?|USD)?\s*$/i);
+    if (amMatch) {
+      amount = parseFloat(amMatch[1]);
+      stripped = stripped.replace(/\$?\s*(\d+\.?\d*)\s*(dollars?|bucks?|USD)?\s*$/i,'');
+    }
+  }
+  const text = stripped.trim();
+  return { text, type, amount };
+}
+
+function coins(d) { return S.rates[d] || S.rates.m; }
+function today() { return new Date().toISOString().slice(0,10); }
+function fmtD(iso) {
+  if (!iso) return '';
+  const [,mo,d] = iso.split('-');
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+' '+parseInt(d);
+}
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function renderBar() {
+  document.getElementById('coin-total').textContent = S.coins.toFixed(2);
+  const pct = Math.min(100,(S.coins/S.goal)*100);
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-text').textContent = Math.floor(S.coins)+' / '+S.goal;
+  document.getElementById('reward-tag').textContent = S.reward || 'set a goal →';
+}
+
+function renderLedger() {
+  const body = document.getElementById('ledger-body');
+  if (!S.entries.length) { body.innerHTML='<div id="empty-state">nothing logged yet<br>start anywhere</div>'; return; }
+  body.innerHTML = S.entries.slice().reverse().map(e => {
+    if (editTaskId === e.id) {
+      return `<div class="edit-row">
+        <input type="date" id="et-date" value="${esc(e.date)}" />
+        <input type="text" id="et-text" value="${esc(e.text)}" onkeydown="tkKey(event,${e.id})" />
+        <select id="et-diff">${DK.map(d=>`<option value="${d}"${e.diff===d?' selected':''}>${DL[d]}</option>`).join('')}</select>
+        <div class="eactions">
+          <button class="btn-ok" onclick="saveTkEdit(${e.id})">save</button>
+          <button class="btn-del" onclick="delTask(${e.id})">✕</button>
+        </div>
+        <span></span>
+      </div>`;
+    }
+    const sec = e.diff==='s';
+    return `<div class="ledger-row" onclick="startTkEdit(${e.id})">
+      <span class="row-date">${esc(fmtD(e.date))}</span>
+      <span class="row-task${sec?' secret':''}">${esc(e.text)}</span>
+      <span class="row-diff d${e.diff}">${sec?'✦':DL[e.diff]}</span>
+      <span class="row-coins${sec?' secret':''}">+${e.coins.toFixed(2)}</span>
+      <span class="edit-hint">✎</span>
+    </div>`;
+  }).join('');
+}
+
+function startTkEdit(id) {
+  editTaskId = id; renderLedger();
+  setTimeout(()=>{ const el=document.getElementById('et-text'); if(el){el.focus();el.select();} },20);
+}
+function tkKey(e,id) {
+  if (e.key==='Enter') saveTkEdit(id);
+  if (e.key==='Escape') { editTaskId=null; renderLedger(); }
+}
+function saveTkEdit(id) {
+  const entry = S.entries.find(e=>e.id===id); if (!entry) return;
+  const nt = document.getElementById('et-text').value.trim(); if (!nt) return;
+  const nd = document.getElementById('et-diff').value;
+  const ndate = document.getElementById('et-date').value || today();
+  S.coins = Math.max(0, parseFloat((S.coins - entry.coins + coins(nd)).toFixed(4)));
+  entry.text=nt; entry.diff=nd; entry.coins=coins(nd); entry.date=ndate;
+  editTaskId=null; save(); renderBar(); renderLedger();
+}
+function delTask(id) {
+  const e = S.entries.find(x=>x.id===id); if (!e) return;
+  S.coins = Math.max(0, parseFloat((S.coins-e.coins).toFixed(4)));
+  S.entries = S.entries.filter(x=>x.id!==id);
+  editTaskId=null; save(); renderBar(); renderLedger();
+}
+
+const tIn = document.getElementById('task-input');
+const dIn = document.getElementById('date-input');
+const dPrev = document.getElementById('diff-preview');
+dIn.value = today();
+
+tIn.addEventListener('input', ()=>{
+  const {diff} = parseTask(tIn.value);
+  const hasTag = /\/[temhs]/i.test(tIn.value);
+  dPrev.textContent = DL[diff]+' · +'+coins(diff).toFixed(2);
+  dPrev.className = diff==='s'?'slit':(hasTag?'lit':'');
+});
+tIn.addEventListener('keydown', e=>{
+  if (e.key!=='Enter') return;
+  const raw = tIn.value.trim(); if (!raw) return;
+  const {text,diff} = parseTask(raw); if (!text) return;
+  const c = coins(diff);
+  const entry = {text,diff,coins:c,date:dIn.value||today(),id:Date.now()};
+  S.entries.push(entry);
+  S.coins = parseFloat((S.coins+c).toFixed(4));
+  save(); floatEl('float-coins','+'+c.toFixed(2),tIn,diff==='s'?'var(--secret)':'var(--gold-mid)'); playBeep(diff==='s');
+  tIn.value=''; dPrev.textContent='medium · +'+S.rates.m.toFixed(2); dPrev.className='';
+  renderBar(); renderLedger(); tIn.focus();
+});
+
+function renderMoney() {
+  const filtered = S.money.slice().reverse().filter(m=>mFilter==='all'||m.type===mFilter);
+  const total = filtered.reduce((s,m)=>s+m.amount,0);
+  document.getElementById('money-total').textContent = total.toFixed(2);
+  const body = document.getElementById('money-body');
+  if (!filtered.length) { body.innerHTML='<div id="money-empty">no entries yet<br>log what you saved<br>or received</div>'; return; }
+  body.innerHTML = filtered.map(m=>{
+    if (editMoneyId===m.id) {
+      return `<div class="money-edit-row">
+        <input type="date" id="me-date" value="${esc(m.date)}" />
+        <input type="text" id="me-text" value="${esc(m.text)}" onkeydown="mkKey(event,${m.id})" />
+        <input type="number" id="me-amt" value="${m.amount.toFixed(2)}" step="0.01" min="0" />
+        <div class="meactions">
+          <button class="btn-ok" style="font-size:9px;padding:2px 6px;" onclick="saveMEdit(${m.id})">ok</button>
+          <button class="btn-del" onclick="delMoney(${m.id})">✕</button>
+        </div>
+      </div>`;
+    }
+    const tc = m.type==='saved'?'mt-saved':m.type==='income'?'mt-income':'mt-other';
+    return `<div class="money-row" onclick="startMEdit(${m.id})">
+      <span class="mdate">${esc(fmtD(m.date))}</span>
+      <span class="mdesc">${esc(m.text)}</span>
+      <span class="mamt">$${m.amount.toFixed(2)}</span>
+      <span class="edit-hint">✎</span>
+    </div>`;
+  }).join('');
+}
+
+function startMEdit(id) {
+  editMoneyId=id; renderMoney();
+  setTimeout(()=>{ const el=document.getElementById('me-text'); if(el){el.focus();el.select();} },20);
+}
+function mkKey(e,id) {
+  if (e.key==='Enter') saveMEdit(id);
+  if (e.key==='Escape') { editMoneyId=null; renderMoney(); }
+}
+function saveMEdit(id) {
+  const m = S.money.find(x=>x.id===id); if (!m) return;
+  m.text = document.getElementById('me-text').value.trim();
+  m.amount = parseFloat(document.getElementById('me-amt').value)||0;
+  m.date = document.getElementById('me-date').value||today();
+  editMoneyId=null; save(); renderMoney();
+}
+function delMoney(id) {
+  S.money = S.money.filter(m=>m.id!==id);
+  editMoneyId=null; save(); renderMoney();
+}
+function setFilter(f, btn) {
+  mFilter=f;
+  document.querySelectorAll('.mfbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on'); renderMoney();
+}
+
+const mIn = document.getElementById('money-input');
+const mPrev = document.getElementById('money-preview');
+mIn.addEventListener('input',()=>{
+  const {type,amount} = parseMoney(mIn.value);
+  const hasTag = /\/?\ ?(saved|income)/i.test(mIn.value);
+  mPrev.textContent = (hasTag?type+' · ':'')+'$'+amount.toFixed(2);
+  mPrev.className = (hasTag&&amount>0)?'lit':'';
+});
+mIn.addEventListener('keydown',e=>{
+  if (e.key!=='Enter') return;
+  const raw=mIn.value.trim(); if (!raw) return;
+  const {text,type,amount} = parseMoney(raw); if (amount<=0) return;
+  const entry = {text:text||raw,type,amount,date:today(),id:Date.now()+1};
+  S.money.push(entry); save();
+  floatEl('float-money-el','+$'+amount.toFixed(2),mIn,null);
+  playMoney();
+  mIn.value=''; mPrev.textContent='$0.00'; mPrev.className='';
+  renderMoney(); mIn.focus();
+});
+
+function floatEl(elId,text,inputEl,color) {
+  const el=document.getElementById(elId);
+  el.textContent=text; if(color) el.style.color=color;
+  const r=inputEl.getBoundingClientRect();
+  el.style.left=(r.left+12)+'px'; el.style.top=(r.top+window.scrollY-4)+'px';
+  el.style.opacity='1'; el.style.transform=''; el.style.transition='none';
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    el.style.transition='transform 0.7s ease,opacity 0.7s ease';
+    el.style.transform='translateY(-26px)'; el.style.opacity='0';
+  }));
+  setTimeout(()=>{ el.style.transform=''; el.style.transition='none'; },800);
+}
+
+function playBeep(secret) {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.connect(g);g.connect(ctx.destination);
+    if(secret){
+      o.frequency.setValueAtTime(440,ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(880,ctx.currentTime+0.12);
+      o.frequency.exponentialRampToValueAtTime(660,ctx.currentTime+0.28);
+      g.gain.setValueAtTime(0.16,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.4);
+      o.start();o.stop(ctx.currentTime+0.4);
+    } else {
+      o.frequency.setValueAtTime(660,ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(880,ctx.currentTime+0.08);
+      g.gain.setValueAtTime(0.14,ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+0.2);
+      o.start();o.stop(ctx.currentTime+0.2);
+    }
+  } catch(e){}
+}
+const CHING_AUDIO = 'data:audio/mp3;base64,Ym9vawAAAABtYXJrAAAAADgAAAA4AAAAEAMAAAAABRAAAAAAAAAAAH4cVdkPvcdBAAAAAAAAAAAkAgAABAAAAAMDAAAABAAADAAAAAEBAABBcHBsaWNhdGlvbnMJAAAAAQEAAFV0aWxpdGllcwAAABEAAAABAQAAY2FzaCByZWdpc3Rlci5tcDMAAAAMAAAAAQYAABAAAAAkAAAAOAAAAAgAAAAEAwAApUcAAAAAAAAIAAAABAMAAKhHAAAAAAAACAAAAAQDAADB/JUAAAAAAAwAAAABBgAAaAAAAHgAAACIAAAACAAAAAAEAABBx70O7yMHEBgAAAABAgAAAQAAAAAAAAAfAgAAAAAAAB8CAAAAAAAAAAAAAAEFAAAIAAAAAQkAAGZpbGU6Ly8vDAAAAAEBAABNYWNpbnRvc2ggSEQIAAAABAMAAABQoRtzAAAACAAAAAAEAABBx5ovOYAAACQAAAABAQAANEEzMkE0RTAtNTM3Ri00QTI3LUE2RjAtNDM2MDFGMzZDMTFGGAAAAAECAACBAAAAAQAAAO8TAAABAAAA7xMAAAEAAAABAAAAAQEAAC8AAAAaAAAAAQEAAE5TVVJMRG9jdW1lbnRJZGVudGlmaWVyS2V5AAAEAAAAAwMAAAD7AAAzAAAAAQIAAGRuaWIAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAAAG1wMz8/Pz8AAAAAAAAAAAAvAAAAAQEAAE5TVVJMQm9va21hcmtRdWFyYW50aW5lTW91bnRlZE5ldHdvcmtWb2x1bWVzS2V5AOQAAAD+////AQAAAAAAAAASAAAABBAAAFQAAAAAAAAABRAAAJgAAAAAAAAAEBAAALwAAAAAAAAAQBAAAKwAAAAAAAAAAiAAAHQBAAAAAAAABSAAAOQAAAAAAAAAECAAAPQAAAAAAAAAESAAACgBAAAAAAAAEiAAAAgBAAAAAAAAEyAAABgBAAAAAAAAICAAAFQBAAAAAAAAMCAAANwAAAAAAAAAAdAAANwAAAAAAAAAENAAAAQAAAAAAAAAF/AAADgAAAAAAAAAIvAAALABAAAAAAAAgAEAgKQBAAAAAAAA7AEAgNwAAAAAAAAA';
+let chingBuffer = null;
+async function loadChing(ctx) {
+  if (chingBuffer) return chingBuffer;
+  try {
+    const b64 = CHING_AUDIO.split(',')[1];
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    chingBuffer = await ctx.decodeAudioData(bytes.buffer);
+  } catch(e) { chingBuffer = null; }
+  return chingBuffer;
+}
+function playMoney() {
+  try {
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const src=ctx.createBufferSource();
+    const g=ctx.createGain();
+    src.connect(g);g.connect(ctx.destination);
+    g.gain.value=0.9;
+    loadChing(ctx).then(buf=>{
+      if(!buf) { playMoneyFallback(ctx); return; }
+      src.buffer=buf; src.start();
+    }).catch(()=>playMoneyFallback(ctx));
+  } catch(e){}
+}
+function playMoneyFallback(ctx) {
+  const now=ctx.currentTime;
+  function noise(start,dur,vol){const buf=ctx.createBuffer(1,ctx.sampleRate*dur,ctx.sampleRate);const d=buf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1);const src=ctx.createBufferSource();src.buffer=buf;const flt=ctx.createBiquadFilter();flt.type='bandpass';flt.frequency.value=1200;flt.Q.value=0.8;const g=ctx.createGain();src.connect(flt);flt.connect(g);g.connect(ctx.destination);g.gain.setValueAtTime(vol,start);g.gain.exponentialRampToValueAtTime(0.001,start+dur);src.start(start);src.stop(start+dur);}
+  function bell(freq,start,dur,vol){const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.connect(g);g.connect(ctx.destination);o.frequency.setValueAtTime(freq,start);g.gain.setValueAtTime(0,start);g.gain.linearRampToValueAtTime(vol,start+0.003);g.gain.exponentialRampToValueAtTime(0.001,start+dur);o.start(start);o.stop(start+dur);}
+  noise(now,0.06,0.35);bell(900,now,0.08,0.12);bell(1200,now+0.005,0.07,0.08);noise(now+0.12,0.04,0.2);bell(3520,now+0.12,1.2,0.28);bell(4186,now+0.13,1.0,0.18);bell(2637,now+0.14,1.1,0.12);bell(3136,now+0.15,0.9,0.08);
+}
+
+function toggleSettings() {
+  const p=document.getElementById('settings-panel');
+  if(p.classList.contains('open')){p.classList.remove('open');return;}
+  document.getElementById('s-reward').value=S.reward;
+  document.getElementById('s-goal').value=S.goal;
+  ['t','e','m','h','s'].forEach(k=>document.getElementById('r-'+k).value=S.rates[k]);
+  p.classList.add('open');
+}
+function saveSettings() {
+  S.reward=document.getElementById('s-reward').value.trim();
+  S.goal=parseFloat(document.getElementById('s-goal').value)||1800;
+  S.rates={t:parseFloat(document.getElementById('r-t').value)||0.25,e:parseFloat(document.getElementById('r-e').value)||1.50,m:parseFloat(document.getElementById('r-m').value)||3.00,h:parseFloat(document.getElementById('r-h').value)||5.00,s:parseFloat(document.getElementById('r-s').value)||10.00};
+  save();renderBar();document.getElementById('settings-panel').classList.remove('open');
+  dPrev.textContent='medium · +'+S.rates.m.toFixed(2);
+}
+
+function exportCSV() {
+  let rows=[['type','date','description','difficulty','coins','dollars']];
+  S.entries.forEach(e=>rows.push(['task',e.date,'"'+e.text.replace(/"/g,'""')+'"',DL[e.diff],e.coins.toFixed(2),'']));
+  S.money.forEach(m=>rows.push(['money',m.date,'"'+(m.text||'').replace(/"/g,'""')+'"',m.type,'',m.amount.toFixed(2)]));
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(rows.map(r=>r.join(',')).join('\n'));
+  a.download='retrolog_'+today()+'.csv';a.click();
+}
+
+load();renderBar();renderLedger();renderMoney();tIn.focus();
+</script>
+</body>
+</html>
