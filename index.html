@@ -403,10 +403,10 @@ body {
   <div id="task-col">
     <div class="input-section">
       <div class="input-row">
-        <input type="text" id="task-input" class="main-input" placeholder="what did you do?  /t /e /m /h /s" autocomplete="off" />
+        <input type="text" id="task-input" class="main-input" placeholder="what did you do?  t e m h s" autocomplete="off" />
         <div id="diff-preview">easy · +1.50</div>
       </div>
-      <div class="hint-line">/t trivial · /e easy · /m medium · /h hard · /s secret · enter to log · <strong>single click</strong> to select · <strong>double click</strong> to edit · <strong>d</strong> or <strong>⌫</strong> to delete · <strong>d box</strong> = quick difficulty</div>
+      <div class="hint-line">t trivial · e easy · m medium · h hard · s secret · enter to log · <strong>single click</strong> to select · <strong>double click</strong> to edit · <strong>d</strong> or <strong>⌫</strong> to delete · <strong>d box</strong> = quick difficulty</div>
     </div>
     <div id="ledger-wrap">
       <div id="ledger-header">
@@ -505,10 +505,10 @@ const DL = { t:'trivial', e:'easy', m:'medium', h:'hard', s:'secret' };
 const DK = ['t','e','m','h','s'];
 
 function parseTask(raw) {
-  const m = raw.match(/\/([temhs])\s*$/i);
+  const m = raw.match(/\b([temhs])\s*$/i);
   if (!m) return { text: raw.trim(), diff: 'e' };
   const d = m[1].toLowerCase();
-  return { text: raw.replace(/\s*\/[temhs]\s*$/i,'').trim(), diff: DK.includes(d)?d:'e' };
+  return { text: raw.replace(/\s*\b[temhs]\s*$/i,'').trim(), diff: DK.includes(d)?d:'e' };
 }
 function parseMoney(raw) {
   const amMatch = raw.match(/\$?\s*(\d+\.?\d*)\s*$/);
