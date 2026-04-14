@@ -803,9 +803,9 @@ tIn.addEventListener('input',()=>{
 tIn.addEventListener('keydown',e=>{
   if (e.key!=='Enter') return;
   const raw=tIn.value.trim(); if(!raw) return;
-  const {text,diff}=parseTask(raw); if(!text) return;
-  const c=coins(diff);
-  const entry={text,diff,coins:c,date:today(),id:Date.now()};
+const {text,diff,date}=parseTask(raw); if(!text) return;
+const c=coins(diff);
+const entry={text,diff,coins:c,date,id:Date.now()};
   const prev=snapshot();
   S.entries.push(entry);
   S.coins=parseFloat((S.coins+c).toFixed(4));
