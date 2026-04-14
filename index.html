@@ -505,13 +505,64 @@ const DL = { t:'trivial', e:'easy', m:'medium', h:'hard', s:'secret' };
 const DK = ['t','e','m','h','s'];
 
 function parseTask(raw) {
-  const isYesterday = /\byesterday\b/i.test(raw);
-  raw = raw.replace(/\byesterday\b/i,'').trim();
-  const m = raw.match(/\b([temhs])\s*$/i);
-  const d = m ? m[1].toLowerCase() : 'e';
-  const text = raw.replace(/\s*\b[temhs]\s*$/i,'').trim();
-  const date = isYesterday ? new Date(Date.now()-86400000).toISOString().slice(0,10) : today();
-  return { text, diff: DK.includes(d)?d:'e', date };
+  let date = today();
+  let text = raw;
+
+  // "N days ago"
+  const daysAgo = text.match(/\b(\d+)\s+days?\s+ago\b/i);
+  if (daysAgo) {
+    const d = new Date(Date.now() - parseInt(daysAgo[1]) * 86400000);
+    date = d.toISOString().slice(0,10);
+    text = text.replace(daysAgo[0], '').trim();
+  }
+  // "yesterday"
+  else if (/\byesterday\b/i.test(text)) {
+    date = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+    text = text.replace(/\byesterday\b/i, '').trim();
+  }
+  // "last Monday" etc
+  else {
+    const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+    const lastDay = text.match(/\blast\s+(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i);
+    if (lastDay) {
+      const target = days.indexOf(lastDay[1].toLowerCase());
+      const now = new Date();
+      const diff = (now.getDay() - target + 7) % 7 || 7;
+      const d = new Date(Date.now() - diff * 86400000);
+      date = d.toISOString().slice(0,10);
+      text = text.replace(lastDay[0], '').trim();
+    }
+    // "april 7" or "apr 7"
+    else {
+      const months = ['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+      const monthNames = ['january','february','march','april','may','june','july','august','september','october','november','december'];
+      const mMatch = text.match(/\b(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})\b/i);
+      if (mMatch) {
+        const mName = mMatch[1].toLowerCase().slice(0,3);
+        const mIdx = months.indexOf(mName);
+        const day = parseInt(mMatch[2]);
+        const year = new Date().getFullYear();
+        date = `${year}-${String(mIdx+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        text = text.replace(mMatch[0], '').trim();
+      }
+      // "4/7" or "4/7/26"
+      else {
+        const slashDate = text.match(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/);
+        if (slashDate) {
+          const m = parseInt(slashDate[1]);
+          const d = parseInt(slashDate[2]);
+          const y = slashDate[3] ? (slashDate[3].length===2 ? 2000+parseInt(slashDate[3]) : parseInt(slashDate[3])) : new Date().getFullYear();
+          date = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          text = text.replace(slashDate[0], '').trim();
+        }
+      }
+    }
+  }
+
+  const m = text.match(/\b([temhs])\s*$/i);
+  const diff = m ? m[1].toLowerCase() : 'e';
+  text = text.replace(/\s*\b[temhs]\s*$/i, '').trim();
+  return { text, diff: DK.includes(diff) ? diff : 'e', date };
 }
 function parseMoney(raw) {
   const amMatch = raw.match(/\$?\s*(\d+\.?\d*)\s*$/);
